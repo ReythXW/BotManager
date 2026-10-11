@@ -1,0 +1,31 @@
+name: BotManager
+version: '${project.version}'
+main: com.botmanager.BotManager
+api-version: '1.21'
+description: Leaves 假人管理插件：Residence 领地权限适配 + 玩家假人管理系统。
+softdepend:
+  - Residence
+  # 只在菜单里买号位、且价格不全为 0 时需要
+  # （menu.price-list / menu.price-per-slot + menu.price-growth）。用反射接入，
+  # 没装时插件照常启动，只是点号位会提示"没有接入经济插件"。
+  - Vault
+
+# 注意：命令级 permission 故意留空，权限改在代码里按子命令判定。
+# 写在这里会在进入 onCommand 之前就拦下全部子命令，普通玩家连 /bm spawn 都用不了。
+commands:
+  bm:
+    description: BotManager 管理命令
+    usage: /bm <spawn|recall|menu|list|remove|action|limit|status|reload|debug|help>
+    aliases:
+      - botmanager
+
+permissions:
+  botmanager.admin:
+    description: 允许使用 /bm 的管理子命令（limit / status / reload / debug）
+    default: op
+  botmanager.spawn:
+    description: 允许召唤、查看和遣散自己的假人
+    default: true
+  botmanager.inventory.others:
+    description: 允许打开任意假人的背包（不限归属，管理员排障用）
+    default: op

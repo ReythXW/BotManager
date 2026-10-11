@@ -1,0 +1,19 @@
+# Maven 构建产物（jar 由构建生成，不入库）
+target/
+
+# 编译中间产物
+*.class
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# 系统文件
+.DS_Store
+Thumbs.db
