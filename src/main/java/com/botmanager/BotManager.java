@@ -65,11 +65,15 @@ public final class BotManager extends JavaPlugin {
     /** Leaves 的假人上线事件。用字符串引用，避免编译期依赖具体 Leaves 版本。 */
     private static final String BOT_JOIN_EVENT = "org.leavesmc.leaves.event.bot.BotJoinEvent";
 
+    /** Leaves 的假人移除事件（同上，字符串引用）。 */
+    private static final String BOT_REMOVE_EVENT = "org.leavesmc.leaves.event.bot.BotRemoveEvent";
+
     private LeavesBridge leaves;
     private BotRegistry registry;
     private BotService service;
     private BotInventoryGuard inventoryGuard;
     private BotNameGate nameGate;
+    private AuthMeUnrestrict authme;
     private BotMenu menu;
     private DialogPrompt prompt;
 
@@ -116,6 +120,11 @@ public final class BotManager extends JavaPlugin {
             getLogger().warning("接不上 Leaves 的假人移除事件：假人被打死后号位不会自动回收，"
                     + "需要玩家自己 /bm remove <编号> 清理。");
         }
+
+        // AuthMe（软依赖）：把上线的假人写进它的 UnrestrictedName 白名单，否则假人
+        // 在它眼里是「未登录玩家」而受保护——打不动。逻辑照搬独立插件 BotUnrestrict，
+        // 只把挂载点从 BotCreateEvent 换成 BotJoinEvent（上下线还原走后者，见该类注释）。
+        setupAuthMe();
 
         // 周期性自动存档。正常 /stop 由关服钩子兜底，这里管的是 kill -9 / 断电
         // 这类「没有任何代码有机会跑」的死法——那种情况下假人会回退到上次落盘的状态。
@@ -216,6 +225,57 @@ public final class BotManager extends JavaPlugin {
                 + "：/bot 假人现在与普通陌生玩家一样受领地权限约束。");
         getLogger().info("提示：给假人授权请用 /res pset <领地> <假人名> <flag> true");
         return true;
+    }
+
+    /**
+     * 接入 AuthMe 的假人白名单同步（软依赖）。
+     *
+     * <p>把假人上线（加名单）和移除（撤名单）两个事件都挂上。
+     * <b>独立于 Residence 的注册路径</b>——没装 Residence 的服务器上，白名单同步照样要工作。
+     */
+    private void setupAuthMe() {
+        this.authme = new AuthMeUnrestrict(this);
+        if (!authme.setup()) {
+            this.authme = null;
+            return;
+        }
+        AuthMeUnrestrict target = this.authme;
+        try {
+            // 上线：BotJoinEvent 覆盖召唤 / manual 存档还原 / resume 拉回 三条路径
+            Class<?> join = Class.forName(BOT_JOIN_EVENT);
+            Method getJoinBot = join.getMethod("getBot");
+            getServer().getPluginManager().registerEvent(
+                    join.asSubclass(Event.class), new Listener() {
+                    }, EventPriority.MONITOR,
+                    (listener, event) -> {
+                        try {
+                            if (getJoinBot.invoke(event) instanceof Player bot) {
+                                target.unrestrict(bot.getName());
+                            }
+                        } catch (Throwable t) {
+                            getLogger().warning("同步假人 AuthMe 白名单时出错：" + t);
+                        }
+                    }, this, true);
+
+            // 移除：任何 reason 都撤名单（死亡 / 上下线同步 / 遣散 / 关服），与独立插件行为一致
+            Class<?> remove = Class.forName(BOT_REMOVE_EVENT);
+            Method getRemoveBot = remove.getMethod("getBot");
+            getServer().getPluginManager().registerEvent(
+                    remove.asSubclass(Event.class), new Listener() {
+                    }, EventPriority.MONITOR,
+                    (listener, event) -> {
+                        try {
+                            // getBot() 返回 Bot，而 Bot extends Player
+                            if (getRemoveBot.invoke(event) instanceof Player bot) {
+                                target.restrict(bot.getName());
+                            }
+                        } catch (Throwable t) {
+                            getLogger().warning("同步假人 AuthMe 白名单时出错：" + t);
+                        }
+                    }, this, true);
+        } catch (Throwable t) {
+            getLogger().warning("接不上 Leaves 的假人事件，AuthMe UnrestrictedName 同步不可用：" + t);
+        }
     }
 
     /**
