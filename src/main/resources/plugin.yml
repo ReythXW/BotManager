@@ -9,6 +9,9 @@ softdepend:
   # 列进来是为了**保证加载顺序**——AuthMe 先启用才会生成 config.yml，本插件才写得了；
   # 实测不加的话 BotManager 会先于 AuthMe 启用，白名单同步会被静默跳过。
   - AuthMe
+  # PlaceholderAPI：注册 %botmanager_*% 占位符（没装就跳过）。
+  # 列进来同样是保证加载顺序——它先启用，register() 才不会落空。
+  - PlaceholderAPI
   # 只在菜单里买号位、且价格不全为 0 时需要
   # （menu.price-list / menu.price-per-slot + menu.price-growth）。用反射接入，
   # 没装时插件照常启动，只是点号位会提示"没有接入经济插件"。

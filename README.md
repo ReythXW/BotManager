@@ -157,6 +157,19 @@ price-growth: 1.0          # 表用完之后不再涨
 
 **价格跟着号位走，不跟着"买过几次"走**——用 `/bm limit add` 白送出去的额度也会占掉前几档。
 
+## PlaceholderAPI 占位符（可选）
+
+装了 [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) 后自动注册（软依赖，没装就跳过），可用于 TAB、计分板、聊天格式等：
+
+| 占位符 | 含义 |
+|---|---|
+| `%botmanager_limit%` | 该玩家的假人上限（买下的号位总数） |
+| `%botmanager_online%` | 当前在线的假人数量 |
+| `%botmanager_used%` | 已占用的号位数量（**含「收回」但未「移除」的假人**——它们已下线但号位保留） |
+| `%botmanager_price%` | 买**下一个**号位需要的价格（纯数字；已到 `menu.max-slots` 时返回空字符串） |
+
+`%botmanager_owned%` 与 `used` 等价，`%botmanager_next_price%` 与 `price` 等价。调试可用 `/papi parse <玩家> %botmanager_price%`。
+
 ## 领地授权（Residence）
 
 玩家想在领地里让假人干活，需要给**假人**授权（和给普通玩家授权完全一样）：

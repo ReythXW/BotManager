@@ -1388,6 +1388,22 @@ public final class BotMenu implements Listener {
     }
 
     /**
+     * 该玩家买「下一个号位」要花多少钱（{@code %botmanager_price%} 占位符的数据源）。
+     *
+     * <p>口径与菜单购买完全一致：下一个号位 = 当前上限 + 1，价格走 {@link #priceFor}；
+     * 已经买到 {@code menu.max-slots}（或管理员把上限抬过了它）时买不了，返回 {@code -1}。
+     *
+     * @return 金额；{@code -1} 表示当前不可购买
+     */
+    public double nextSlotPrice(UUID player) {
+        int next = registry.getLimit(player) + 1;
+        if (next > maxSlots()) {
+            return -1;
+        }
+        return priceFor(next);
+    }
+
+    /**
      * 号位 {@code slot}（从 1 数）卖多少钱。
      *
      * <p>两级来源，价格表优先：

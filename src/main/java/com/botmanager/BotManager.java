@@ -158,6 +158,11 @@ public final class BotManager extends JavaPlugin {
         menu.setup();
         getServer().getPluginManager().registerEvents(menu, this);
 
+        // PlaceholderAPI（软依赖）：注册 %botmanager_*% 占位符。放在这里是因为
+        // %botmanager_price% 要用已初始化的 menu；softdepend 保证 PAPI 先启用
+        // （同 AuthMe 的教训：加载顺序反了注册会落空）。
+        setupPlaceholders();
+
         if (!leaves.canRestore()) {
             getLogger().warning("假人存档还原不可用，玩家上下线时假人会是全新状态（背包清空）。");
         }
@@ -275,6 +280,26 @@ public final class BotManager extends JavaPlugin {
                     }, this, true);
         } catch (Throwable t) {
             getLogger().warning("接不上 Leaves 的假人事件，AuthMe UnrestrictedName 同步不可用：" + t);
+        }
+    }
+
+    /**
+     * 接入 PlaceholderAPI 的占位符（软依赖，没装就跳过）。
+     *
+     * <p>注册 {@code %botmanager_limit%}（上限）、{@code %botmanager_online%}（在线数）、
+     * {@code %botmanager_used%}（已占用号位数，含收回未移除的假人）、
+     * {@code %botmanager_price%}（下一个号位的价格）。
+     */
+    private void setupPlaceholders() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            return;
+        }
+        try {
+            new BotPlaceholders(this, registry, leaves, menu).register();
+            getLogger().info("已注册 PlaceholderAPI 占位符：%botmanager_limit% / "
+                    + "%botmanager_online% / %botmanager_used% / %botmanager_price%");
+        } catch (Throwable t) {
+            getLogger().warning("注册 PlaceholderAPI 占位符失败：" + t);
         }
     }
 
