@@ -186,12 +186,13 @@ public final class BotManager extends JavaPlugin {
         // 假人不触发 PlayerJoinEvent，Residence 不会给它建玩家档案，
         // 结果是任何 flag 判定都直接 false——set 开过的权限也全都不生效。这里自己补上。
         // 必须先于 flags：后者查 flag 前要靠它把假人"介绍"给 Residence。
-        this.cache = new ResidenceCache(this);
+        // 传入 residence 实例：反射与类加载都必须走 Residence 自己的 loader，详见该类注释。
+        this.cache = new ResidenceCache(this, residence);
         if (!cache.setup()) {
             getLogger().warning("补建假人档案失败：假人在领地里的权限判定会一律为拒绝（过严，不会漏保护）。");
         }
 
-        this.flags = new ResidenceFlags(this, cache);
+        this.flags = new ResidenceFlags(this, cache, residence.getClass().getClassLoader());
         flags.setup();
 
         this.interceptor = new BotActionInterceptor(this, settings, hook, flags, cache);

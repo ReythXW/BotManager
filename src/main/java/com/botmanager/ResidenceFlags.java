@@ -23,6 +23,14 @@ public final class ResidenceFlags {
 
     private final BotManager plugin;
     private final ResidenceCache cache;
+
+    /**
+     * Residence 的类加载器。必须用它来解析 Residence 的内部类，理由见
+     * {@link ResidenceCache} 类注释的「类加载器」一节：本插件的 loader 看不到
+     * Residence 声明的 WorldEdit 软依赖，且会另定义一份静态状态与它脱节。
+     */
+    private final ClassLoader residenceLoader;
+
     private final Map<String, Object> flagConstants = new ConcurrentHashMap<>();
 
     private Class<?> flagsClass;
@@ -30,9 +38,10 @@ public final class ResidenceFlags {
     private Method playerHasMethod;
     private boolean ready;
 
-    public ResidenceFlags(BotManager plugin, ResidenceCache cache) {
+    public ResidenceFlags(BotManager plugin, ResidenceCache cache, ClassLoader residenceLoader) {
         this.plugin = plugin;
         this.cache = cache;
+        this.residenceLoader = residenceLoader;
     }
 
     /**
@@ -42,7 +51,8 @@ public final class ResidenceFlags {
      */
     public boolean setup() {
         try {
-            Class<?> permsClass = Class.forName("com.bekvon.bukkit.residence.protection.FlagPermissions");
+            Class<?> permsClass = Class.forName(
+                    "com.bekvon.bukkit.residence.protection.FlagPermissions", true, residenceLoader);
             // 6.x 在 containers 下；5.x 在 protection 下。已确认 6.0.0.1 ~ 6.0.3.2 均为 containers。
             this.flagsClass = findClass(
                     "com.bekvon.bukkit.residence.containers.Flags",
@@ -63,10 +73,10 @@ public final class ResidenceFlags {
     }
 
     /** 依次尝试若干候选类名，返回第一个存在的。 */
-    private static Class<?> findClass(String... candidates) throws ClassNotFoundException {
+    private Class<?> findClass(String... candidates) throws ClassNotFoundException {
         for (String name : candidates) {
             try {
-                return Class.forName(name);
+                return Class.forName(name, true, residenceLoader);
             } catch (ClassNotFoundException ignored) {
                 // 试下一个
             }
